@@ -11,6 +11,7 @@
     "GLDebugMixin",
     "IrisDefinesMixin",
     "BiomeUniformsMixin",
+    "DimensionUniformsMixin",
     "SonarWaveRendererMixin",
     "EERenderTypesMixin",
     "DGRenderTypesMixin",
