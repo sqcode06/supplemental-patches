@@ -32,16 +32,20 @@ fun generateAtmospherics(directory: Path) {
     }.toString()
 
     file.writeText(
-        file.readText().replace(
+        insertBeforeAnchorOnce(
+            file.readText(),
             "    if (isEyeInWater == 1) {",
-            "$compositeCode\n    if (isEyeInWater == 1) {"
+            "$compositeCode\n",
+            COMPOSITE_PATH
         )
     )
 
     file.writeText(
-        file.readText().replaceFirst(
+        insertAfterAnchorOnce(
+            file.readText(),
             "//Includes//",
-            "//Includes//\n$compositeIncludes"
+            "\n$compositeIncludes",
+            COMPOSITE_PATH
         )
     )
 
@@ -52,9 +56,11 @@ fun generateAtmospherics(directory: Path) {
 
     val conditions = ATMOSPHERICS.map { "(${it.conditions.conditions()})" }.joinToString(" || ")
     file.writeText(
-        file.readText().replace(
+        insertBeforeAnchorOnce(
+            file.readText(),
             "defined NETHER_STORM || defined COLORED_LIGHT_FOG",
-            "$conditions || defined NETHER_STORM || defined COLORED_LIGHT_FOG"
+            "$conditions || ",
+            COMPOSITE_PATH
         )
     )
 }

@@ -172,6 +172,38 @@ fun List<String>.conditions() = this.joinToString(" && ") {
     if (it.matches(Regex("^([A-Za-z0-9]|_)*$"))) "defined $it" else "($it)"
 }
 
+fun countAnchorMatches(contents: String, anchor: String): Int {
+    var count = 0
+    var index = contents.indexOf(anchor)
+    while (index >= 0) {
+        count++
+        index = contents.indexOf(anchor, index + anchor.length)
+    }
+    return count
+}
+
+fun requireAnchorCount(contents: String, anchor: String, expectedCount: Int, file: String): Int {
+    val found = countAnchorMatches(contents, anchor)
+    if (found != expectedCount) {
+        throw MinecraftError(
+            "Anchor mismatch in $file: expected $expectedCount occurrence(s) of '$anchor', found $found. " +
+                    "This shader version is likely incompatible; update anchor definitions for this version.",
+            file
+        )
+    }
+    return found
+}
+
+fun insertBeforeAnchorOnce(contents: String, anchor: String, insertion: String, file: String): String {
+    requireAnchorCount(contents, anchor, 1, file)
+    return contents.replaceFirst(anchor, insertion + anchor)
+}
+
+fun insertAfterAnchorOnce(contents: String, anchor: String, insertion: String, file: String): String {
+    requireAnchorCount(contents, anchor, 1, file)
+    return contents.replaceFirst(anchor, anchor + insertion)
+}
+
 // rectangles
 class Rectangle(var x1: Int, var y1: Int, var x2: Int, var y2: Int, val glsl: String) {
     fun canMergeX(rectangle: Rectangle): Boolean =
