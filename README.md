@@ -25,6 +25,8 @@ Some of the most _exciting_ features of the mod include (for players):
 
 For details on the supported areas that can be patched onto Euphoria Patches, check out this [tutorial](https://supplemental-patches.pages.dev/tutorials/getting_started).
 
+For shader injection compatibility anchors and update guidance, see [required shader anchors](documentation/required_shader_anchors.md).
+
 ## FAQ
 
 **Q:** Will there be ports to loaders other than (Neo)Forge and Fabric? <br>
