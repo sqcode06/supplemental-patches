@@ -7,7 +7,9 @@ import net.minecraft.core.registries.Registries
 import net.minecraft.resources.ResourceKey
 import net.minecraft.world.level.biome.Biome
 
-val _biomeMap: Object2IntOpenHashMap<ResourceKey<Biome>> = Object2IntOpenHashMap()
+val _biomeMap: Object2IntOpenHashMap<ResourceKey<Biome>> = Object2IntOpenHashMap<ResourceKey<Biome>>().apply {
+    defaultReturnValue(-1)
+}
 
 // handling biomes
 fun getBiomeMap(): Object2IntOpenHashMap<ResourceKey<Biome>> {

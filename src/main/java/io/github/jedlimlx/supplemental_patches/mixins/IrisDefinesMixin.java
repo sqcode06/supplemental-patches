@@ -2,8 +2,10 @@ package io.github.jedlimlx.supplemental_patches.mixins;
 
 
 import io.github.jedlimlx.supplemental_patches.shaders.BiomeUniformsKt;
+import io.github.jedlimlx.supplemental_patches.shaders.DimensionUniformsKt;
 import net.irisshaders.iris.helpers.StringPair;
 import net.irisshaders.iris.shaderpack.IrisDefines;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.forgespi.language.IModInfo;
 import org.spongepowered.asm.mixin.Mixin;
@@ -44,9 +46,34 @@ public class IrisDefinesMixin {
             }
         );
 
+        DimensionUniformsKt.getDimensionMap().forEach(
+            (dimension, id) -> lst.add(
+                new StringPair(
+                    "MOD_DIMENSION_" + normalizeDimensionKey(dimension.location()),
+                    String.valueOf(id)
+                )
+            )
+        );
+
         return lst;
     }
 
+    private static String normalizeDimensionKey(ResourceLocation resourceLocation) {
+        String normalized = (resourceLocation.getNamespace() + "_" + resourceLocation.getPath())
+            .toUpperCase(Locale.ROOT)
+            .replaceAll("[^A-Z0-9]", "_")
+            .replaceAll("_+", "_");
+
+        if (normalized.startsWith("_")) {
+            normalized = normalized.substring(1);
+        }
+
+        if (normalized.endsWith("_")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+
+        return normalized;
+    
     private static String sanitizeDefinePart(String part) {
         return NON_ALNUM_PATTERN.matcher(part.toUpperCase(Locale.ROOT)).replaceAll("_");
     }
