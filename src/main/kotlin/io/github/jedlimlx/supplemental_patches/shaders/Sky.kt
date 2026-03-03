@@ -11,7 +11,9 @@ data class Sky(
     val code: String,
     val dimension: String,
     val deferred: String,
+    val deferredTarget: String,
     val reflection: String,
+    val reflectionTarget: String,
     val conditions: List<String>
 )
 
@@ -109,8 +111,8 @@ fun generateSkies(directory: Path) {
     )
 
     SKIES.forEach {
+        val indent = it.deferredTarget.inferIndentation()
         val code = StringBuilder().apply {
-            val indent = " ".repeat(12)
             if (it.conditions.isNotEmpty()) {
                 append("$indent\n")
                 append("$indent#if ${it.conditions.conditions()}\n")
@@ -141,8 +143,8 @@ fun generateSkies(directory: Path) {
 
     val reflectionFile = File(directory.absolutePathString() + REFLECTION_PATH)
     SKIES.forEach {
+        val indent = it.reflectionTarget.inferIndentation()
         val code = StringBuilder().apply {
-            val indent = " ".repeat(if (it.dimension == "END") 8 else 20)
             if (it.conditions.isNotEmpty()) {
                 append("$indent\n")
                 append("$indent#if ${it.conditions.conditions()}\n")

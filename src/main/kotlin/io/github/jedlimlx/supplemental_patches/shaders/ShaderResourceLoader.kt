@@ -643,9 +643,11 @@ object ShaderResourceLoader {
                                 "$path${if (path.isEmpty()) "" else "/"}" +
                                         (json["code"].asString ?: throw MinecraftError(".glsl file not specified.", loc.toString()))
                             ] ?: throw MinecraftError("$path/${json["code"].asString} not found!", loc.toString()),
-                            json["dimension"].asString ?: throw MinecraftError("Dimension in which sky should be rendered is not specified.", loc.toString()),
+                            json["dimension"].asString ?: throw MinecraftError("Dimension compile token is not specified.", loc.toString()),
                             json["deferred"].asString ?: throw MinecraftError("Code to be inserted into deferred1.glsl not specified.", loc.toString()),
+                            json["deferredTarget"].asString ?: throw MinecraftError("deferredTarget for sky injection is not specified.", loc.toString()),
                             json["reflection"].asString ?: throw MinecraftError("Code to be inserted into reflectionImpl.glsl is not specified.", loc.toString()),
+                            json["reflectionTarget"].asString ?: throw MinecraftError("reflectionTarget for sky injection is not specified.", loc.toString()),
                             json["conditions"]?.asJsonArray?.map { it.asString } ?: listOf()
                         )
                     )

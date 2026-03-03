@@ -7,5 +7,7 @@
   "conditions": [
     "defined ENDERSCAPE_ATMOSPHERE || defined MOD_ENDERSCAPE",
     "ES_NEBULA"
-  ]
+  ],
+  "deferredTarget": "color.rgb = endSkyColor;",
+  "reflectionTarget": "vec3 skyReflection = endSkyColor * shadowMult;\n        #endif"
 }
