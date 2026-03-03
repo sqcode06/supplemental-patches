@@ -25,16 +25,7 @@ Some of the most _exciting_ features of the mod include (for players):
 
 For details on the supported areas that can be patched onto Euphoria Patches, check out this [tutorial](https://supplemental-patches.pages.dev/tutorials/getting_started).
 
-## Biome define naming
-
-Supplemental Patches now uses `MOD_BIOME_<NAMESPACE>_<PATH>` as the canonical biome define format.
-Both `<NAMESPACE>` and `<PATH>` are uppercased and any non-alphanumeric character is replaced with `_`.
-
-Example:
-
-- `minecraft:flower_forest` -> `MOD_BIOME_MINECRAFT_FLOWER_FOREST`
-
-For one transition cycle, the legacy `MOD_BIOME_<PATH>` format is also emitted for backward compatibility.
+For shader injection compatibility anchors and update guidance, see [required shader anchors](documentation/required_shader_anchors.md).
 
 ## FAQ
 

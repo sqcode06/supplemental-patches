@@ -18,7 +18,58 @@ data class Sky(
 const val DEFERRED_PATH = "/shaders/program/deferred1.glsl"
 const val REFLECTION_PATH = "/shaders/lib/materials/materialMethods/reflectionBackground.glsl"
 const val REFLECTION_PATH_2 = "/shaders/lib/materials/materialMethods/reflections.glsl"
+
+private const val DEFERRED_IMPORT_ANCHOR = "#if defined END && defined END_STARS\n    #include \"/lib/atmospherics/enderStars.glsl\""
+private const val REFLECTIONS_IMPORT_ANCHOR = "#ifdef ATM_COLOR_MULTS"
+private const val OVERWORLD_DEFERRED_ANCHOR = "color.rgb += nightNebula;"
+private const val NETHER_DEFERRED_ANCHOR = "color.rgb = netherColor * (1.0 - maxBlindnessDarkness);"
+private const val END_DEFERRED_ANCHOR = "color.rgb = endSkyColor;"
+private const val OVERWORLD_REFLECTION_ANCHOR = "skyReflection += (DrawOverworldBeams(RVdotU, playerPos, viewPos) * 0.4 + 0.6).rgb * 0.08;"
+private const val END_REFLECTION_ANCHOR = "vec3 skyReflection = endSkyColor * shadowMult;"
+
+private val SKY_ANCHOR_FIXTURES = mapOf(
+    "shader_anchors/complementary_r5_5/deferred1.glsl" to listOf(
+        DEFERRED_IMPORT_ANCHOR,
+        OVERWORLD_DEFERRED_ANCHOR,
+        NETHER_DEFERRED_ANCHOR,
+        END_DEFERRED_ANCHOR
+    ),
+    "shader_anchors/complementary_r5_5/reflectionBackground.glsl" to listOf(
+        OVERWORLD_REFLECTION_ANCHOR,
+        END_REFLECTION_ANCHOR
+    ),
+    "shader_anchors/complementary_r5_5/reflections.glsl" to listOf(
+        REFLECTIONS_IMPORT_ANCHOR
+    ),
+    "shader_anchors/complementary_r5_6/deferred1.glsl" to listOf(
+        DEFERRED_IMPORT_ANCHOR,
+        OVERWORLD_DEFERRED_ANCHOR,
+        NETHER_DEFERRED_ANCHOR,
+        END_DEFERRED_ANCHOR
+    ),
+    "shader_anchors/complementary_r5_6/reflectionBackground.glsl" to listOf(
+        OVERWORLD_REFLECTION_ANCHOR,
+        END_REFLECTION_ANCHOR
+    ),
+    "shader_anchors/complementary_r5_6/reflections.glsl" to listOf(
+        REFLECTIONS_IMPORT_ANCHOR
+    )
+)
+
+private fun validateSkyAnchorFixtures() {
+    SKY_ANCHOR_FIXTURES.forEach { (resourcePath, anchors) ->
+        val fixture = Sky::class.java.classLoader.getResourceAsStream(resourcePath)?.bufferedReader()?.use { it.readText() }
+            ?: throw MinecraftError("Missing sky anchor fixture resource '$resourcePath'.", resourcePath)
+
+        anchors.forEach { anchor ->
+            requireAnchorCount(fixture, anchor, 1, resourcePath)
+        }
+    }
+}
+
 fun generateSkies(directory: Path) {
+    validateSkyAnchorFixtures()
+
     // generate atmospheric libraries within atmospherics folder
     SKIES.forEach {
         val file = File(directory.absolutePathString() + "/shaders/lib/atmospherics/${it.name}")
@@ -36,19 +87,24 @@ fun generateSkies(directory: Path) {
 
     // injecting code into deferred1.glsl
     val deferredFile = File(directory.absolutePathString() + DEFERRED_PATH)
+    val normalisedDeferredImports = deferredFile.readText().replace("\r\n", "\n")
     deferredFile.writeText(
-        deferredFile.readText().replace(
-            Regex("#if defined END && defined END_STARS\r?\n    #include \"/lib/atmospherics/enderStars.glsl\""),
-            "$importCode\n#if defined END && defined END_STARS\n    #include \"/lib/atmospherics/enderStars.glsl\""
+        insertBeforeAnchorOnce(
+            normalisedDeferredImports,
+            DEFERRED_IMPORT_ANCHOR,
+            "$importCode\n",
+            DEFERRED_PATH
         )
     )
 
     // injecting code into gbuffers_water.glsl / dh_water.glsl
     val reflectionPath = File(directory.absolutePathString() + REFLECTION_PATH_2)
     reflectionPath.writeText(
-        reflectionPath.readText().replace(
-            "#ifdef ATM_COLOR_MULTS",
-            importCode.prependIndent("    ") + "\n#ifdef ATM_COLOR_MULTS"
+        insertBeforeAnchorOnce(
+            reflectionPath.readText(),
+            REFLECTIONS_IMPORT_ANCHOR,
+            importCode.prependIndent("    ") + "\n",
+            REFLECTION_PATH_2
         )
     )
 
@@ -66,22 +122,20 @@ fun generateSkies(directory: Path) {
             }
         }.toString()
 
-        val regex = when (it.dimension) {
-            "OVERWORLD" -> Regex("color.rgb \\+= nightNebula;\\r?\\n {12}#endif")
-            "NETHER" -> Regex("color.rgb = netherColor \\* \\(1.0 - maxBlindnessDarkness\\);")
-            "END" -> Regex("color.rgb = endSkyColor;")
-            else -> Regex("^$")
-        }
-
-        val key = when (it.dimension) {
-            "OVERWORLD" -> "color.rgb += nightNebula;\n            #endif"
-            "NETHER" -> "color.rgb = netherColor * (1.0 - maxBlindnessDarkness);"
-            "END" -> "color.rgb = endSkyColor;"
-            else -> ""
+        val anchor = when (it.dimension) {
+            "OVERWORLD" -> OVERWORLD_DEFERRED_ANCHOR
+            "NETHER" -> NETHER_DEFERRED_ANCHOR
+            "END" -> END_DEFERRED_ANCHOR
+            else -> throw MinecraftError("Unsupported sky dimension '${it.dimension}' for deferred injection.", DEFERRED_PATH)
         }
 
         deferredFile.writeText(
-            deferredFile.readText().replace(regex, key + code)
+            insertAfterAnchorOnce(
+                deferredFile.readText(),
+                anchor,
+                code,
+                DEFERRED_PATH
+            )
         )
     }
 
@@ -100,20 +154,21 @@ fun generateSkies(directory: Path) {
             }
         }.toString()
 
-        val regex = when (it.dimension) {
-            "OVERWORLD" -> Regex("skyReflection \\+= \\(DrawOverworldBeams\\(RVdotU, playerPos, viewPos\\) \\* 0\\.4 \\+ 0\\.6\\)\\.rgb \\* 0\\.08;\\r?\\n {20}#endif")
-            "END" -> Regex("vec3 skyReflection = endSkyColor \\* shadowMult;\\r?\\n {8}#endif")
-            else -> Regex("^$")
+        val anchor = when (it.dimension) {
+            "OVERWORLD" -> OVERWORLD_REFLECTION_ANCHOR
+            "END" -> END_REFLECTION_ANCHOR
+            else -> null
         }
 
-        val key = when (it.dimension) {
-            "OVERWORLD" -> "skyReflection += (DrawOverworldBeams(RVdotU, playerPos, viewPos) * 0.4 + 0.6).rgb * 0.08;\n                    #endif"
-            "END" -> "vec3 skyReflection = endSkyColor * shadowMult;\n        #endif"
-            else -> ""
+        if (anchor != null) {
+            reflectionFile.writeText(
+                insertAfterAnchorOnce(
+                    reflectionFile.readText(),
+                    anchor,
+                    code,
+                    REFLECTION_PATH
+                )
+            )
         }
-
-        reflectionFile.writeText(
-            reflectionFile.readText().replace(regex, key + code)
-        )
     }
 }
