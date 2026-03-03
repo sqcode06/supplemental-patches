@@ -11,13 +11,36 @@ data class Sky(
     val code: String,
     val dimension: String,
     val deferred: String,
+    val deferredTarget: String,
     val reflection: String,
+    val reflectionTarget: String,
     val conditions: List<String>
 )
 
 const val DEFERRED_PATH = "/shaders/program/deferred1.glsl"
 const val REFLECTION_PATH = "/shaders/lib/materials/materialMethods/reflectionBackground.glsl"
 const val REFLECTION_PATH_2 = "/shaders/lib/materials/materialMethods/reflections.glsl"
+
+private fun String.inferIndentation(): String {
+    val line = lines().lastOrNull() ?: ""
+    return " ".repeat(line.indexOfFirst { !it.isWhitespace() }.takeIf { it >= 0 } ?: 0)
+}
+
+private fun injectAtTarget(file: File, target: String, insertion: String, sourceName: String, targetName: String) {
+    val contents = file.readText()
+    val occurrences = Regex(Regex.escape(target)).findAll(contents).count()
+
+    if (occurrences == 0) {
+        throw MinecraftError("Sky '$sourceName' target '$targetName' was not found in ${file.path}", null)
+    }
+
+    if (occurrences > 1) {
+        throw MinecraftError("Sky '$sourceName' target '$targetName' is ambiguous in ${file.path} (found $occurrences matches)", null)
+    }
+
+    file.writeText(contents.replaceFirst(target, "$target$insertion"))
+}
+
 fun generateSkies(directory: Path) {
     // generate atmospheric libraries within atmospherics folder
     SKIES.forEach {
@@ -53,8 +76,8 @@ fun generateSkies(directory: Path) {
     )
 
     SKIES.forEach {
+        val indent = it.deferredTarget.inferIndentation()
         val code = StringBuilder().apply {
-            val indent = " ".repeat(12)
             if (it.conditions.isNotEmpty()) {
                 append("$indent\n")
                 append("$indent#if ${it.conditions.conditions()}\n")
@@ -66,29 +89,13 @@ fun generateSkies(directory: Path) {
             }
         }.toString()
 
-        val regex = when (it.dimension) {
-            "OVERWORLD" -> Regex("color.rgb \\+= nightNebula;\\r?\\n {12}#endif")
-            "NETHER" -> Regex("color.rgb = netherColor \\* \\(1.0 - maxBlindnessDarkness\\);")
-            "END" -> Regex("color.rgb = endSkyColor;")
-            else -> Regex("^$")
-        }
-
-        val key = when (it.dimension) {
-            "OVERWORLD" -> "color.rgb += nightNebula;\n            #endif"
-            "NETHER" -> "color.rgb = netherColor * (1.0 - maxBlindnessDarkness);"
-            "END" -> "color.rgb = endSkyColor;"
-            else -> ""
-        }
-
-        deferredFile.writeText(
-            deferredFile.readText().replace(regex, key + code)
-        )
+        injectAtTarget(deferredFile, it.deferredTarget, code, it.name, "deferredTarget")
     }
 
     val reflectionFile = File(directory.absolutePathString() + REFLECTION_PATH)
     SKIES.forEach {
+        val indent = it.reflectionTarget.inferIndentation()
         val code = StringBuilder().apply {
-            val indent = " ".repeat(if (it.dimension == "END") 8 else 20)
             if (it.conditions.isNotEmpty()) {
                 append("$indent\n")
                 append("$indent#if ${it.conditions.conditions()}\n")
@@ -100,20 +107,6 @@ fun generateSkies(directory: Path) {
             }
         }.toString()
 
-        val regex = when (it.dimension) {
-            "OVERWORLD" -> Regex("skyReflection \\+= \\(DrawOverworldBeams\\(RVdotU, playerPos, viewPos\\) \\* 0\\.4 \\+ 0\\.6\\)\\.rgb \\* 0\\.08;\\r?\\n {20}#endif")
-            "END" -> Regex("vec3 skyReflection = endSkyColor \\* shadowMult;\\r?\\n {8}#endif")
-            else -> Regex("^$")
-        }
-
-        val key = when (it.dimension) {
-            "OVERWORLD" -> "skyReflection += (DrawOverworldBeams(RVdotU, playerPos, viewPos) * 0.4 + 0.6).rgb * 0.08;\n                    #endif"
-            "END" -> "vec3 skyReflection = endSkyColor * shadowMult;\n        #endif"
-            else -> ""
-        }
-
-        reflectionFile.writeText(
-            reflectionFile.readText().replace(regex, key + code)
-        )
+        injectAtTarget(reflectionFile, it.reflectionTarget, code, it.name, "reflectionTarget")
     }
 }
